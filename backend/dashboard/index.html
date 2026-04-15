@@ -73,6 +73,33 @@
         <ul id="conversations" class="conversation-list"></ul>
       </section>
 
+
+      <section class="panel god-panel">
+        <div class="panel-header">
+          <h2>God Intervention</h2>
+          <span class="muted">Inform agents (no direct control)</span>
+        </div>
+
+        <form id="intervention-form" class="god-form">
+          <label for="intervention-mode">Target scope</label>
+          <select id="intervention-mode">
+            <option value="single">Single agent</option>
+            <option value="multiple">Multiple agents</option>
+            <option value="all" selected>All agents</option>
+          </select>
+
+          <label>Target agents</label>
+          <div id="intervention-agents" class="agent-checkboxes"></div>
+
+          <label for="intervention-message">Message</label>
+          <textarea id="intervention-message" rows="4" placeholder="A storm is approaching from the west. Stay near shelter."></textarea>
+
+          <button type="submit">Send Intervention</button>
+        </form>
+
+        <pre id="intervention-output" class="qa-output"></pre>
+      </section>
+
       <section class="panel events-panel">
         <div class="panel-header">
           <h2>Live Event Feed</h2>

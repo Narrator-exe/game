@@ -42,3 +42,27 @@ def test_smallville_compatible_endpoints():
         assert 'locations' in payload
         assert any(agent['name'] == 'John' for agent in payload['agents'])
         assert any(loc['name'] == 'Workshop' for loc in payload['locations'])
+
+
+def test_god_intervention_single_multiple_all():
+    with TestClient(app) as client:
+        # create two extra agents so target scopes are meaningful
+        client.post('/locations', json={'name': 'Temple'})
+        a1 = client.post('/agents', json={'name': 'Aster', 'memories': [], 'location': 'Temple', 'activity': 'watching sky'}).json()['agent']['id']
+        a2 = client.post('/agents', json={'name': 'Bram', 'memories': [], 'location': 'Temple', 'activity': 'reading'}).json()['agent']['id']
+
+        single = client.post('/api/interventions', json={'mode': 'single', 'agent_ids': [a1], 'message': 'A solar eclipse starts soon.'})
+        assert single.status_code == 200
+        assert single.json()['count'] == 1
+
+        multiple = client.post('/api/interventions', json={'mode': 'multiple', 'agent_ids': [a1, a2], 'message': 'Meet near the square before dusk.'})
+        assert multiple.status_code == 200
+        assert multiple.json()['count'] == 2
+
+        all_agents = client.post('/api/interventions', json={'mode': 'all', 'agent_ids': [], 'message': 'Rain will begin in one hour.'})
+        assert all_agents.status_code == 200
+        assert all_agents.json()['count'] >= 2
+
+        detail = client.get(f'/api/agents/{a1}')
+        memories = detail.json()['memories']
+        assert any(m['source'] == 'god_intervention' for m in memories)

@@ -124,6 +124,7 @@ input {
 .memory-panel { grid-column: 1; grid-row: 2; padding: 12px; }
 .convo-panel { grid-column: 1; grid-row: 3; padding: 12px; }
 .events-panel { grid-column: 2; grid-row: 3; padding: 12px; }
+.god-panel { grid-column: 2; grid-row: 2; padding: 12px; }
 
 .panel-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
 
@@ -208,13 +209,47 @@ input {
   color: var(--accent-2);
 }
 
+
+.god-form {
+  display: grid;
+  gap: 8px;
+}
+
+select,
+textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #0d1321;
+  color: var(--text);
+  padding: 8px;
+  font-family: inherit;
+}
+
+.agent-checkboxes {
+  max-height: 110px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px;
+  display: grid;
+  gap: 6px;
+}
+
+.agent-checkboxes label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+
 @media (max-width: 1200px) {
   .app-shell { grid-template-columns: 1fr; }
   .main-grid {
     grid-template-columns: 1fr;
     grid-template-rows: auto;
   }
-  .world-panel, .detail-panel, .memory-panel, .convo-panel, .events-panel {
+  .world-panel, .detail-panel, .memory-panel, .convo-panel, .god-panel, .events-panel {
     grid-column: auto;
     grid-row: auto;
   }

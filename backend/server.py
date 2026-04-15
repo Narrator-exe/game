@@ -100,6 +100,12 @@ class AddObservationRequest(BaseModel):
     reactable: bool = False
 
 
+class GodInterventionRequest(BaseModel):
+    message: str
+    mode: str = "all"  # single | multiple | all
+    agent_ids: List[str] = Field(default_factory=list)
+
+
 EMOJIS = {
     "cook": "🍳",
     "walk": "🚶",
@@ -403,6 +409,47 @@ class SimulationEngine:
             agent.current_action = decision.get("action", agent.current_action)
             agent.emoji = self._emoji_for_action(agent.current_action)
 
+
+
+    async def god_intervention(self, message: str, mode: str, agent_ids: List[str]) -> List[str]:
+        if not message.strip():
+            raise ValueError("Intervention message cannot be empty")
+
+        if mode == "all":
+            targets = list(self.agents.values())
+        elif mode == "single":
+            if len(agent_ids) != 1:
+                raise ValueError("Single mode requires exactly one agent id")
+            target = self.agents.get(agent_ids[0])
+            if not target:
+                raise KeyError(agent_ids[0])
+            targets = [target]
+        elif mode == "multiple":
+            if not agent_ids:
+                raise ValueError("Multiple mode requires at least one agent id")
+            targets = []
+            for aid in agent_ids:
+                agent = self.agents.get(aid)
+                if not agent:
+                    raise KeyError(aid)
+                targets.append(agent)
+        else:
+            raise ValueError("Mode must be one of: single, multiple, all")
+
+        informed_ids = []
+        for agent in targets:
+            text = f"God intervention message for {agent.name}: {message.strip()}"
+            await self._remember(agent, text=text, source="god_intervention", importance=9)
+            informed_ids.append(agent.id)
+
+        await self.broadcast({
+            "type": "intervention",
+            "mode": mode,
+            "message": message.strip(),
+            "agent_ids": informed_ids,
+        })
+        return informed_ids
+
     def _update_conversations(self) -> None:
         agents = list(self.agents.values())
         for i, first in enumerate(agents):
@@ -639,6 +686,19 @@ async def add_observation(body: AddObservationRequest) -> Dict:
         return {"success": True}
     except KeyError:
         raise HTTPException(status_code=404, detail="Agent not found")
+
+
+
+
+@app.post("/api/interventions")
+async def god_interventions(body: GodInterventionRequest) -> Dict:
+    try:
+        informed = await engine.god_intervention(body.message, body.mode, body.agent_ids)
+        return {"success": True, "informed_agent_ids": informed, "count": len(informed)}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Agent not found: {str(exc)}")
 
 
 @app.websocket("/ws/events")

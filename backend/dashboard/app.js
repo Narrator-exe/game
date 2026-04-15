@@ -18,6 +18,11 @@ const el = {
   runBtn: document.getElementById('btn-run'),
   pauseBtn: document.getElementById('btn-pause'),
   tickBtn: document.getElementById('btn-tick'),
+  interventionForm: document.getElementById('intervention-form'),
+  interventionMode: document.getElementById('intervention-mode'),
+  interventionAgents: document.getElementById('intervention-agents'),
+  interventionMessage: document.getElementById('intervention-message'),
+  interventionOutput: document.getElementById('intervention-output'),
 };
 
 const state = {
@@ -56,6 +61,37 @@ function renderAgents() {
     };
     el.agents.appendChild(card);
   });
+}
+
+
+
+
+
+function syncInterventionSelectionMode() {
+  const mode = el.interventionMode.value;
+  const boxes = el.interventionAgents.querySelectorAll('input[type="checkbox"]');
+  boxes.forEach((box, idx) => {
+    if (mode === 'all') {
+      box.checked = true;
+      box.disabled = true;
+    } else if (mode === 'single') {
+      box.disabled = false;
+      box.checked = idx === 0;
+    } else {
+      box.disabled = false;
+    }
+  });
+}
+
+function renderInterventionAgentSelector() {
+  el.interventionAgents.innerHTML = '';
+  state.agents.forEach((agent, index) => {
+    const id = `intervention-${agent.id}`;
+    const wrapper = document.createElement('label');
+    wrapper.innerHTML = `<input type="checkbox" id="${id}" value="${agent.id}" ${index === 0 ? 'checked' : ''} /> ${safeText(agent.emoji)} ${safeText(agent.name)}`;
+    el.interventionAgents.appendChild(wrapper);
+  });
+  syncInterventionSelectionMode();
 }
 
 function renderMap() {
@@ -126,6 +162,7 @@ async function loadAgents() {
   state.agents = await res.json();
   renderAgents();
   renderMap();
+  renderInterventionAgentSelector();
 
   if (!state.selectedAgentId && state.agents.length) {
     state.selectedAgentId = state.agents[0].id;
@@ -192,6 +229,40 @@ el.tickBtn.addEventListener('click', async () => {
   pushEvent('control', 'Manual tick requested');
 });
 
+
+
+el.interventionMode.addEventListener('change', syncInterventionSelectionMode);
+
+el.interventionForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const mode = el.interventionMode.value;
+  const message = el.interventionMessage.value.trim();
+  if (!message) return;
+
+  const agentIds = Array.from(el.interventionAgents.querySelectorAll('input[type="checkbox"]:checked')).map((n) => n.value);
+  if (mode === 'single' && agentIds.length !== 1) {
+    el.interventionOutput.textContent = 'Select exactly one agent for single mode.';
+    return;
+  }
+
+  const res = await fetch('/api/interventions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mode, message, agent_ids: agentIds }),
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    el.interventionOutput.textContent = `Error: ${data.detail || 'Failed to send intervention.'}`;
+    return;
+  }
+
+  el.interventionOutput.textContent = `Delivered to ${data.count} agent(s): ${data.informed_agent_ids.join(', ')}`;
+  pushEvent('intervention', `${mode}: ${message}`);
+  el.interventionMessage.value = '';
+  if (state.selectedAgentId) await loadAgent(state.selectedAgentId);
+});
+
 function connectEvents() {
   const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
   const ws = new WebSocket(`${protocol}://${location.host}/ws/events`);
@@ -235,6 +306,11 @@ function connectEvents() {
 
     if (payload.type === 'qa') {
       pushEvent('qa', `${payload.agent_id}: ${payload.question}`);
+      return;
+    }
+
+    if (payload.type === 'intervention') {
+      pushEvent('intervention', `${payload.mode} -> [${(payload.agent_ids || []).join(', ')}]`);
     }
   };
 
