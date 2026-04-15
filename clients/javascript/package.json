@@ -1,0 +1,7 @@
+{
+  "name": "@npc-sim/client",
+  "version": "0.1.0",
+  "description": "JavaScript client for generative NPC simulation server",
+  "type": "module",
+  "main": "src/index.js"
+}

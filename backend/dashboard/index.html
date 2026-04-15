@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NPC Smallville Control Center</title>
+  <link rel="stylesheet" href="/dashboard/styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="left-rail panel">
+      <h1>NPC Smallville</h1>
+      <p class="muted">Live simulation control center</p>
+
+      <div class="status-grid">
+        <div><span class="label">Status</span><span id="sim-state">Connecting…</span></div>
+        <div><span class="label">Tick</span><span id="sim-tick">-</span></div>
+        <div><span class="label">Model</span><span id="sim-model">-</span></div>
+        <div><span class="label">Ollama</span><span id="sim-ollama">-</span></div>
+      </div>
+
+      <div class="controls">
+        <button id="btn-run">Run</button>
+        <button id="btn-pause" class="secondary">Pause</button>
+        <button id="btn-tick" class="secondary">Single Tick</button>
+      </div>
+
+      <h2>Agents</h2>
+      <input id="agent-filter" placeholder="Filter agents..." />
+      <div id="agents" class="agents-list"></div>
+    </aside>
+
+    <main class="main-grid">
+      <section class="panel world-panel">
+        <div class="panel-header">
+          <h2>World Map</h2>
+          <span class="muted">10x10 live grid</span>
+        </div>
+        <div id="map" class="map-grid"></div>
+      </section>
+
+      <section class="panel detail-panel">
+        <div class="panel-header">
+          <h2 id="detail-title">Select an agent</h2>
+          <span id="detail-meta" class="muted">-</span>
+        </div>
+        <div id="agent-details" class="agent-details"></div>
+
+        <form id="ask-form" class="ask-form">
+          <label for="question">Interview selected agent</label>
+          <div class="ask-row">
+            <input id="question" placeholder="What are you planning next?" />
+            <button type="submit">Ask</button>
+          </div>
+        </form>
+
+        <pre id="qa-output" class="qa-output"></pre>
+      </section>
+
+      <section class="panel memory-panel">
+        <div class="panel-header">
+          <h2>Memory Stream</h2>
+          <span class="muted">Newest first</span>
+        </div>
+        <ul id="memories" class="memory-list"></ul>
+      </section>
+
+      <section class="panel convo-panel">
+        <div class="panel-header">
+          <h2>Conversations</h2>
+          <span class="muted">Auto-generated social moments</span>
+        </div>
+        <ul id="conversations" class="conversation-list"></ul>
+      </section>
+
+      <section class="panel events-panel">
+        <div class="panel-header">
+          <h2>Live Event Feed</h2>
+          <span class="muted">Diagnostics</span>
+        </div>
+        <ul id="events" class="event-list"></ul>
+      </section>
+    </main>
+  </div>
+
+  <script src="/dashboard/app.js"></script>
+</body>
+</html>
