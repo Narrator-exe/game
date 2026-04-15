@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NPC Simulation Dashboard</title>
+  <link rel="stylesheet" href="/dashboard/styles.css" />
+</head>
+<body>
+  <header>
+    <h1>Generative NPC Simulation</h1>
+    <div id="sim-status">Connecting...</div>
+  </header>
+
+  <main>
+    <section class="panel" id="agents-panel">
+      <h2>Agents</h2>
+      <div id="agents"></div>
+    </section>
+
+    <section class="panel" id="detail-panel">
+      <h2 id="detail-title">Select an agent</h2>
+      <div id="agent-details"></div>
+      <form id="ask-form">
+        <label for="question">Ask selected agent:</label>
+        <input id="question" placeholder="What are you doing right now?" />
+        <button type="submit">Send</button>
+      </form>
+      <pre id="qa-output"></pre>
+    </section>
+
+    <section class="panel" id="memory-panel">
+      <h2>Memory Stream</h2>
+      <ul id="memories"></ul>
+    </section>
+  </main>
+
+  <script src="/dashboard/app.js"></script>
+</body>
+</html>
