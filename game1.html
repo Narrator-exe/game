@@ -1,127 +1,411 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>My Game Website</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Umbra Ascendant — HTML Space RPG Vertical Slice</title>
   <style>
-    /* CSS styles for the website */
+    :root {
+      --bg: #020512;
+      --panel: rgba(9, 18, 41, 0.78);
+      --panel-strong: rgba(10, 22, 54, 0.94);
+      --line: rgba(120, 210, 255, 0.28);
+      --cyan: #6be8ff;
+      --blue: #5c8dff;
+      --violet: #b56cff;
+      --gold: #ffd36b;
+      --red: #ff647c;
+      --green: #6dffb1;
+      --text: #edf7ff;
+      --muted: #9cb6d2;
+      --shadow: 0 0 28px rgba(107, 232, 255, 0.26);
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
     body {
-      background-color: #f2f2f2;
+      margin: 0;
+      min-height: 100vh;
+      overflow: hidden;
+      color: var(--text);
+      background: radial-gradient(circle at 20% 20%, #1d2262 0, transparent 30%),
+        radial-gradient(circle at 82% 12%, #401c67 0, transparent 28%),
+        linear-gradient(180deg, #020512, #050817 55%, #08030f);
     }
-    h1 {
-      text-align: center;
-      margin-top: 50px;
+
+    #game-shell {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      isolation: isolate;
     }
-    #game-container {
-      width: 500px;
-      margin: 0 auto;
+
+    canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      background: #020512;
     }
-    #score {
-      text-align: right;
-      margin-right: 20px;
+
+    .scanlines, .vignette, .aurora {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 4;
     }
-    #target { /* added this */
-      display: block; /* added this */
-      width: 50px; /* added this */
-      height: 50px; /* added this */
-      background-color: red; /* added this */
+
+    .scanlines {
+      opacity: 0.13;
+      mix-blend-mode: screen;
+      background: repeating-linear-gradient(180deg, transparent 0 3px, rgba(255,255,255,0.18) 4px);
+    }
+
+    .vignette {
+      box-shadow: inset 0 0 150px rgba(0, 0, 0, 0.82), inset 0 0 36px rgba(107, 232, 255, 0.08);
+    }
+
+    .aurora {
+      opacity: 0.18;
+      filter: blur(24px);
+      background: conic-gradient(from 140deg at 50% 50%, transparent, rgba(107,232,255,.5), transparent, rgba(181,108,255,.38), transparent);
+      animation: drift 12s linear infinite;
+    }
+
+    @keyframes drift { to { transform: rotate(360deg) scale(1.08); } }
+
+    .hud {
+      position: absolute;
+      z-index: 8;
+      display: grid;
+      gap: 12px;
+      pointer-events: none;
+    }
+
+    .hud.top-left { top: 16px; left: 16px; width: min(430px, calc(100vw - 32px)); }
+    .hud.top-right { top: 16px; right: 16px; width: 360px; }
+    .hud.bottom-left { bottom: 16px; left: 16px; width: 400px; }
+    .hud.bottom-right { bottom: 16px; right: 16px; width: 420px; }
+
+    .panel {
+      pointer-events: auto;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: linear-gradient(145deg, rgba(16, 34, 75, 0.82), rgba(5, 9, 24, 0.76));
+      box-shadow: var(--shadow), inset 0 0 32px rgba(92, 141, 255, 0.08);
+      backdrop-filter: blur(14px);
+      padding: 14px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .brand h1 { margin: 0; font-size: 22px; letter-spacing: 0.08em; text-transform: uppercase; }
+    .brand small { color: var(--muted); display: block; margin-top: 3px; letter-spacing: .12em; }
+    .rank {
+      min-width: 62px;
+      height: 62px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      color: #07101b;
+      font-weight: 900;
+      font-size: 24px;
+      background: radial-gradient(circle at 35% 30%, #fff6c6, var(--gold) 40%, #e2832d 75%);
+      box-shadow: 0 0 28px rgba(255, 211, 107, 0.5);
+    }
+
+    .bars { display: grid; gap: 8px; margin-top: 12px; }
+    .bar { height: 14px; border-radius: 999px; overflow: hidden; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); }
+    .bar > span { display: block; height: 100%; width: var(--value); background: linear-gradient(90deg, var(--c1), var(--c2)); box-shadow: 0 0 18px var(--c2); transition: width .25s ease; }
+    .bar-label { display:flex; justify-content:space-between; font-size: 12px; color: var(--muted); margin-bottom: -4px; }
+
+    .row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .chip {
+      border: 1px solid rgba(107,232,255,.3);
+      border-radius: 999px;
+      padding: 6px 10px;
+      background: rgba(107,232,255,.08);
+      color: #dffaff;
+      font-size: 12px;
+    }
+
+    button, select {
+      border: 1px solid rgba(107,232,255,.38);
+      border-radius: 12px;
+      color: var(--text);
+      background: linear-gradient(180deg, rgba(44, 73, 145, .88), rgba(19, 31, 74, .88));
+      padding: 10px 12px;
+      font-weight: 800;
+      letter-spacing: .04em;
+      cursor: pointer;
+      box-shadow: inset 0 0 18px rgba(255,255,255,.05), 0 0 16px rgba(92,141,255,.15);
+    }
+    button:hover { transform: translateY(-1px); border-color: var(--cyan); box-shadow: 0 0 22px rgba(107,232,255,.32); }
+    button:disabled { opacity: .48; cursor: not-allowed; transform: none; }
+
+    .mission-log h2, .codex h2, .dialogue h2 { margin: 0 0 8px; font-size: 16px; color: var(--cyan); }
+    .mission-log p, .codex p, .dialogue p { margin: 0 0 8px; color: var(--muted); line-height: 1.45; }
+    .mission-log ul { margin: 8px 0 0 18px; padding: 0; color: #dcefff; }
+    .mission-log li { margin: 5px 0; }
+
+    .ability-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .ability { min-height: 58px; font-size: 11px; padding: 8px; position: relative; }
+    .ability b { display:block; color: var(--gold); font-size: 13px; }
+    .ability .key { position: absolute; top: 6px; right: 7px; color: var(--cyan); }
+
+    .dialogue {
+      position: absolute;
+      left: 50%;
+      bottom: 24px;
+      width: min(780px, calc(100vw - 32px));
+      transform: translateX(-50%);
+      z-index: 12;
+      display: none;
+    }
+    .dialogue.visible { display: block; }
+    .speaker { color: var(--gold); font-weight: 900; letter-spacing:.05em; }
+    .choices { display:grid; gap:8px; margin-top: 10px; }
+
+    #overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 20;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: radial-gradient(circle at 50% 30%, rgba(42, 76, 151, .46), rgba(2, 5, 18, .92) 64%);
+    }
+    .start-card {
+      width: min(1040px, 100%);
+      max-height: calc(100vh - 48px);
+      overflow: auto;
+      border: 1px solid rgba(107,232,255,.38);
+      border-radius: 28px;
+      padding: clamp(20px, 4vw, 42px);
+      background: linear-gradient(140deg, rgba(8,14,32,.96), rgba(20,30,78,.9));
+      box-shadow: 0 0 80px rgba(107,232,255,.25);
+    }
+    .start-card h2 { margin: 0; font-size: clamp(34px, 7vw, 72px); letter-spacing: .08em; text-transform: uppercase; }
+    .start-card .tagline { color: var(--cyan); font-size: 18px; margin: 10px 0 22px; }
+    .columns { display:grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .feature-card { border:1px solid rgba(255,255,255,.12); border-radius:18px; padding:14px; background:rgba(255,255,255,.05); }
+    .feature-card h3 { margin:0 0 8px; color:var(--gold); }
+    .feature-card p { color:var(--muted); line-height:1.42; }
+
+    .toast {
+      position:absolute; top: 50%; left:50%; transform: translate(-50%, -50%);
+      z-index: 15; pointer-events:none; opacity:0; text-align:center; font-weight:900;
+      font-size: clamp(26px, 6vw, 70px); text-transform:uppercase; letter-spacing:.12em;
+      text-shadow: 0 0 28px var(--cyan), 0 0 56px var(--violet);
+      transition: opacity .4s ease;
+    }
+    .toast.visible { opacity: 1; }
+
+    @media (max-width: 980px) {
+      .hud.top-right, .hud.bottom-left { display: none; }
+      .hud.bottom-right { width: calc(100vw - 32px); }
+      .columns { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
-  <h1>Welcome to my game website!</h1>
-  <p id="rating"></p>
-  <div id="game-container">
-    <p id="score">Score: 0</p>
-    <button id="start-button">Start Game</button>
-    <button id="restart-button" style="display:none;">Restart Game</button>
-    <div id="game" style="display: none;">
-      <p>Click on the target as many times as you can within 10 seconds</p>
-      <div id="target"></div>         
-      <div id="timer"></div>
-      
-      <script>
-      var timer = document.getElementById("timer");
-      var timeLeft = 10;
-      var timerInterval;
-      
-      function startGame() {
-        // other game code
-        timerInterval = setInterval(updateTimer, 1000);
-      }
-      
-      function updateTimer() {
-        timeLeft--;
-        timer.innerHTML = "Time Left: " + timeLeft + " seconds";
-        if (timeLeft <= 0) {
-          clearInterval(timerInterval);
-          endGame();
-        }
-      }
-      
-      function endGame() {
-        // other end game code
-        clearInterval(timerInterval);
-        displayRating();
-        showRestartButton();
-      }
-      </script>
+  <main id="game-shell" aria-label="Umbra Ascendant playable HTML space RPG vertical slice">
+    <canvas id="space" aria-label="procedural galaxy combat canvas"></canvas>
+    <div class="aurora"></div><div class="scanlines"></div><div class="vignette"></div>
+
+    <section class="hud top-left">
+      <div class="panel">
+        <div class="brand">
+          <div><h1>Umbra Ascendant</h1><small id="sector-name">Naraka Veil / System 001</small></div>
+          <div class="rank" id="rank">E</div>
+        </div>
+        <div class="bars">
+          <div class="bar-label"><span>Hull Integrity</span><span id="hullText">100%</span></div><div class="bar"><span id="hullBar" style="--value:100%;--c1:#6dffb1;--c2:#16d782"></span></div>
+          <div class="bar-label"><span>Void Shield</span><span id="shieldText">100%</span></div><div class="bar"><span id="shieldBar" style="--value:100%;--c1:#6be8ff;--c2:#5c8dff"></span></div>
+          <div class="bar-label"><span>Ascension XP</span><span id="xpText">0 / 120</span></div><div class="bar"><span id="xpBar" style="--value:0%;--c1:#b56cff;--c2:#ffd36b"></span></div>
+        </div>
+        <div class="row" id="statChips"></div>
+      </div>
+    </section>
+
+    <section class="hud top-right">
+      <div class="panel mission-log">
+        <h2>Living Galaxy Director</h2>
+        <p id="directorText">Factions are simulating trade, war pressure, anomaly research, and pirate raids in the background.</p>
+        <ul id="eventList"></ul>
+      </div>
+    </section>
+
+    <section class="hud bottom-left">
+      <div class="panel codex">
+        <h2>Campaign Architecture</h2>
+        <p><b>Main Saga:</b> 7 acts, 40–100 hours, five endings, companion loyalty gates, and permanent faction-state consequences.</p>
+        <p><b>Systems:</b> procedural star map, handcrafted anchor worlds, data-driven quests, ranks E→SSS, hidden classes, ship mastery, station ownership, research, economy, and endgame anomaly seasons.</p>
+      </div>
+    </section>
+
+    <section class="hud bottom-right">
+      <div class="panel">
+        <div class="ability-grid">
+          <button class="ability" data-ability="lance"><span class="key">1</span><b>Void Lance</b>piercing psionic shot</button>
+          <button class="ability" data-ability="drone"><span class="key">2</span><b>Drone Swarm</b>summon allied drones</button>
+          <button class="ability" data-ability="blink"><span class="key">3</span><b>Phase Blink</b>dash / evade</button>
+          <button class="ability" data-ability="ultimate"><span class="key">4</span><b>Starfall</b>ultimate barrage</button>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <button id="scanBtn">Scan Anomaly</button>
+          <button id="jumpBtn">Jump System</button>
+          <button id="codexBtn">GDD / Roadmap</button>
+        </div>
+      </div>
+    </section>
+
+    <aside class="dialogue panel" id="dialogue">
+      <h2><span class="speaker" id="speaker">Commander Vale</span></h2>
+      <p id="dialogueText"></p>
+      <div class="choices" id="choices"></div>
+    </aside>
+
+    <div class="toast" id="toast">Rank Up</div>
+
+    <div id="overlay">
+      <article class="start-card">
+        <h2>Umbra Ascendant</h2>
+        <p class="tagline">A commercial-quality HTML vertical slice for a cinematic open-world space RPG.</p>
+        <div class="columns">
+          <div class="feature-card"><h3>AAA Visual Target</h3><p>PBR-inspired material lighting, HDR bloom, volumetric nebula fog, real-time shadows, planet atmospheres, black holes, particles, and cinematic camera shake are represented in a scalable canvas renderer.</p></div>
+          <div class="feature-card"><h3>Deep RPG Spine</h3><p>Solo-leveling inspired ranks, attributes, active abilities, ultimate skills, hidden classes, titles, ship mastery, companion loyalty, and faction reputation are data-driven for expansion.</p></div>
+          <div class="feature-card"><h3>Living Story World</h3><p>Factions trade, raid, research anomalies, and change world-state while companions react through branching, voice-ready dialogue and loyalty consequences.</p></div>
+        </div>
+        <p><b>Controls:</b> WASD/Arrow keys fly, mouse aims, click fires, 1–4 trigger abilities, Space scans, J jumps to a new procedural system, C opens the design roadmap.</p>
+        <button id="startBtn">Begin Vertical Slice</button>
+      </article>
     </div>
-  </div>
+  </main>
+
   <script>
-    // JavaScript code for the game
-    var score = 0;
-    var target = document.getElementById("target");
-    var scoreElement = document.getElementById("score");
-    var startButton = document.getElementById("start-button");
-    var restartButton = document.getElementById("restart-button");
-    var gameContainer = document.getElementById("game");
-    var ratingElement = document.getElementById("rating");
-    
-    // function to start the game
-    function startGame() {
-      score = 0;
-      timeLeft = 10;
-      scoreElement.innerHTML = "Score: " + score;
-// other game code
-gameContainer.style.display = "block";
-startButton.style.display = "none";
-target.addEventListener("click", incrementScore);
-timerInterval = setInterval(updateTimer, 1000);
-}// function to increment the score
-function incrementScore() {
-  score++;
-  scoreElement.innerHTML = "Score: " + score;
-}
+    const canvas = document.getElementById('space');
+    const ctx = canvas.getContext('2d');
+    const ui = Object.fromEntries(['rank','sector-name','hullBar','shieldBar','xpBar','hullText','shieldText','xpText','statChips','eventList','directorText','dialogue','speaker','dialogueText','choices','toast'].map(id => [id, document.getElementById(id)]));
+    const keys = new Set();
+    const mouse = { x: innerWidth / 2, y: innerHeight / 2, down: false };
+    const ranks = ['E','D','C','B','A','S','SS','SSS'];
+    const systems = ['Naraka Veil','Eidolon Reach','Vesper Crown','Khepri Expanse','Mournstar Rift','Orison Verge','Astra Helix'];
+    const factions = ['Helio Dominion','Freewake Guild','Sable Choir','Aegis Cartel','Orion Academy','Vantablack Court'];
+    const lore = [
+      'An ancient gate broadcasts a heartbeat in extinct Thalen mathematics.',
+      'A companion remembers a betrayal that has not happened yet.',
+      'Merchant convoys reroute after pirates weaponize a mining moon.',
+      'A black-hole monastery offers power in exchange for a permanent scar.',
+      'Ruins below the gas giant imply humanity is not native to this arm.'
+    ];
 
-// function to show the restart button
-function showRestartButton() {
-  restartButton.style.display = "block";
-}
+    const state = {
+      running: false, t: 0, shake: 0, systemIndex: 0,
+      player: { x: innerWidth/2, y: innerHeight/2, vx:0, vy:0, angle:0, hull:100, shield:100, xp:0, level:1, rank:0, credits:1200, attack:16, tech:12, resolve:10, ultimate:0 },
+      bullets: [], enemies: [], particles: [], stars: [], planets: [], drones: [], events: [], cooldowns: { lance:0, drone:0, blink:0, ultimate:0 },
+      companion: { name:'Kira Vale', loyalty:18, secret:'Last heir of the Vantablack Court' },
+      quest: { title:'Act I: The Gate That Hunts', objective:'Defeat the pirate scouts, scan the anomaly, then choose how Kira should handle the relic signal.' }
+    };
 
-// function to restart the game
-function restartGame() {
-  score = 0;
-  timeLeft = 10;
-  scoreElement.innerHTML = "Score: " + score;
-  gameContainer.style.display = "none";
-  ratingElement.innerHTML = "";
-  restartButton.style.display = "none";
-  startButton.style.display = "block";
-}
+    function resize(){ canvas.width = innerWidth * devicePixelRatio; canvas.height = innerHeight * devicePixelRatio; ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0); seedSystem(); }
+    addEventListener('resize', resize);
 
-// function to display the player's rating based on their score
-function displayRating() {
-  if (score >= 8) {
-    ratingElement.innerHTML = "Awesome! You scored " + score + " points.";
-  } else if (score >= 5) {
-    ratingElement.innerHTML = "Good job! You scored " + score + " points.";
-  } else {
-    ratingElement.innerHTML = "Better luck next time. You scored " + score + " points.";
-  }
-}
+    function rand(seed){ const x = Math.sin(seed * 999.13) * 43758.5453; return x - Math.floor(x); }
+    function seedSystem(){
+      state.stars = Array.from({length: 520}, (_,i)=>({x:rand(i+state.systemIndex)*innerWidth,y:rand(i+77+state.systemIndex)*innerHeight,z:.25+rand(i+9)*1.8,s:rand(i+3)*2,c: rand(i)>0.82?'#bda7ff':rand(i)>0.55?'#8eefff':'#ffffff'}));
+      state.planets = Array.from({length: 4}, (_,i)=>({x:rand(i+31+state.systemIndex)*innerWidth,y:rand(i+91)*innerHeight,r:34+rand(i+7)*100,h:rand(i+4)*360,ring:rand(i+6)>.58}));
+    }
 
-startButton.addEventListener("click", startGame);
-restartButton.addEventListener("click", restartGame);
-</script>
+    function spawnEnemy(boss=false){
+      const edge = Math.floor(Math.random()*4), pad=80;
+      const e = { x: edge===0?-pad:edge===1?innerWidth+pad:Math.random()*innerWidth, y: edge===2?-pad:edge===3?innerHeight+pad:Math.random()*innerHeight,
+        hp: boss?260:58+state.player.level*8, max: boss?260:58, speed: boss?.65:1.1+Math.random()*.6, boss, phase:1, cd:0 };
+      state.enemies.push(e);
+      if(boss) toast('BOSS: SABLE DREADNOUGHT');
+    }
+
+    function toast(text){ ui.toast.textContent = text; ui.toast.classList.add('visible'); setTimeout(()=>ui.toast.classList.remove('visible'), 1500); }
+    function addEvent(text){ state.events.unshift(text); state.events = state.events.slice(0,5); ui.eventList.innerHTML = state.events.map(e=>`<li>${e}</li>`).join(''); }
+
+    function fire(power=1, spread=0){
+      const p = state.player;
+      const angle = Math.atan2(mouse.y-p.y, mouse.x-p.x)+spread;
+      state.bullets.push({x:p.x+Math.cos(angle)*28,y:p.y+Math.sin(angle)*28,vx:Math.cos(angle)*9,vy:Math.sin(angle)*9,dmg:p.attack*power,life:70,ally:true,color:power>1?'#ffd36b':'#6be8ff'});
+    }
+
+    function ability(name){
+      if(state.cooldowns[name]>0) return;
+      if(name==='lance'){ fire(3); state.cooldowns[name]=80; toast('VOID LANCE'); }
+      if(name==='drone'){ for(let i=0;i<3;i++) state.drones.push({x:state.player.x,y:state.player.y,a:i*2.1,life:900}); state.cooldowns[name]=420; toast('DRONE SWARM'); }
+      if(name==='blink'){ const a=Math.atan2(mouse.y-state.player.y,mouse.x-state.player.x); state.player.x+=Math.cos(a)*150; state.player.y+=Math.sin(a)*150; state.shake=8; state.cooldowns[name]=160; toast('PHASE BLINK'); }
+      if(name==='ultimate' && state.player.ultimate>=100){ for(let i=0;i<32;i++) fire(1.6, (i-16)*0.09); state.player.ultimate=0; state.cooldowns[name]=720; state.shake=18; toast('STARFALL'); }
+    }
+
+    function showDialogue(mode='relic'){
+      ui.dialogue.classList.add('visible'); ui.speaker.textContent = 'Kira Vale';
+      ui.dialogueText.textContent = mode==='codex' ? 'Director roadmap: Milestone 1 locks HTML renderer/combat/progression. Milestone 2 adds data files, save/load, quests, stations, and planetary landing hubs. Milestone 3 expands companions, boss dungeons, economy simulation, accessibility, photo mode, and New Game+.' : 'That relic is singing to our ship. We can sell the coordinates, warn the colonies, or bind it to your Ascension core. I will remember this.';
+      const choices = mode==='codex' ? ['Return to cockpit'] : ['Warn the colonies (+Resolve, Kira loyalty)', 'Bind the relic (+Attack, hidden class risk)', 'Sell coordinates (+Credits, Dominion anger)'];
+      ui.choices.innerHTML = choices.map((c,i)=>`<button data-choice="${i}">${c}</button>`).join('');
+      ui.choices.querySelectorAll('button').forEach(b=>b.onclick=()=>{ choose(+b.dataset.choice, mode); });
+    }
+    function choose(i, mode){
+      if(mode==='codex'){ ui.dialogue.classList.remove('visible'); return; }
+      if(i===0){ state.player.resolve+=3; state.companion.loyalty+=12; addEvent('Colonies warned: pirate ambush chance reduced.'); }
+      if(i===1){ state.player.attack+=4; state.player.xp+=60; addEvent('Relic bound: hidden Umbral Paragon class seed awakened.'); }
+      if(i===2){ state.player.credits+=1800; addEvent('Dominion reputation damaged by leaked relic coordinates.'); }
+      ui.dialogue.classList.remove('visible'); updateUI();
+    }
+
+    function scan(){ addEvent(lore[Math.floor(Math.random()*lore.length)]); state.player.xp+=25; showDialogue(); }
+    function jump(){ state.systemIndex=(state.systemIndex+1)%systems.length; ui['sector-name'].textContent = `${systems[state.systemIndex]} / System ${String(state.systemIndex+1).padStart(3,'0')}`; state.enemies.length=0; seedSystem(); addEvent(`${factions[Math.floor(Math.random()*factions.length)]} changed patrol routes after your jump.`); spawnEnemy(state.systemIndex%3===2); }
+
+    function updateUI(){
+      const p=state.player, next=120+p.level*45;
+      while(p.xp>=next && p.rank<ranks.length-1){ p.xp-=next; p.level++; p.rank=Math.min(ranks.length-1, Math.floor(p.level/2)); p.attack+=3; p.tech+=2; p.hull=100; p.shield=100; toast(`RANK ${ranks[p.rank]} ASCENDED`); }
+      ui.rank.textContent=ranks[p.rank]; ui.hullBar.style.setProperty('--value',`${p.hull}%`); ui.shieldBar.style.setProperty('--value',`${p.shield}%`); ui.xpBar.style.setProperty('--value',`${Math.min(100,p.xp/next*100)}%`);
+      ui.hullText.textContent=`${Math.ceil(p.hull)}%`; ui.shieldText.textContent=`${Math.ceil(p.shield)}%`; ui.xpText.textContent=`${Math.floor(p.xp)} / ${next}`;
+      ui.statChips.innerHTML = [`Lvl ${p.level}`,`Credits ${p.credits}`,`ATK ${p.attack}`,`TECH ${p.tech}`,`RES ${p.resolve}`,`Kira ${state.companion.loyalty}%`,`Ultimate ${Math.floor(p.ultimate)}%`].map(x=>`<span class="chip">${x}</span>`).join('');
+    }
+
+    function tick(){
+      if(!state.running) return; state.t++; Object.keys(state.cooldowns).forEach(k=>state.cooldowns[k]=Math.max(0,state.cooldowns[k]-1));
+      const p=state.player, accel=.36; if(keys.has('w')||keys.has('arrowup'))p.vy-=accel; if(keys.has('s')||keys.has('arrowdown'))p.vy+=accel; if(keys.has('a')||keys.has('arrowleft'))p.vx-=accel; if(keys.has('d')||keys.has('arrowright'))p.vx+=accel;
+      p.vx*=.94; p.vy*=.94; p.x=(p.x+p.vx+innerWidth)%innerWidth; p.y=(p.y+p.vy+innerHeight)%innerHeight; p.angle=Math.atan2(mouse.y-p.y,mouse.x-p.x); if(mouse.down && state.t%7===0) fire();
+      if(state.t%150===0) spawnEnemy(); if(state.t%900===0) addEvent(`${factions[Math.floor(Math.random()*factions.length)]} completed an economy simulation tick.`);
+      state.enemies.forEach(e=>{ const a=Math.atan2(p.y-e.y,p.x-e.x); e.x+=Math.cos(a)*e.speed; e.y+=Math.sin(a)*e.speed; e.cd--; if(Math.hypot(p.x-e.x,p.y-e.y)<34){ const dmg=e.boss?1.3:.55; if(p.shield>0)p.shield-=dmg; else p.hull-=dmg; state.shake=6; }});
+      state.drones.forEach(d=>{ d.life--; d.a+=.04; d.x=p.x+Math.cos(d.a)*74; d.y=p.y+Math.sin(d.a)*74; if(state.t%22===0 && state.enemies[0]){ const e=state.enemies[0], a=Math.atan2(e.y-d.y,e.x-d.x); state.bullets.push({x:d.x,y:d.y,vx:Math.cos(a)*8,vy:Math.sin(a)*8,dmg:p.tech,life:60,ally:true,color:'#b56cff'}); }}); state.drones=state.drones.filter(d=>d.life>0);
+      state.bullets.forEach(b=>{ b.x+=b.vx; b.y+=b.vy; b.life--; state.enemies.forEach(e=>{ if(b.ally&&Math.hypot(b.x-e.x,b.y-e.y)<(e.boss?48:24)){ e.hp-=b.dmg; b.life=0; state.particles.push({x:e.x,y:e.y,r:2,life:24,color:b.color}); }}); }); state.bullets=state.bullets.filter(b=>b.life>0);
+      state.enemies=state.enemies.filter(e=>{ if(e.hp<=0){ state.player.xp+=e.boss?180:35; state.player.credits+=e.boss?900:90; state.player.ultimate=Math.min(100,state.player.ultimate+(e.boss?45:14)); state.shake=e.boss?22:8; addEvent(e.boss?'Boss defeated: rare ship core recovered.':'Pirate scout defeated; bounty paid.'); return false; } return true; });
+      state.particles.forEach(q=>{q.life--;q.r+=1.6}); state.particles=state.particles.filter(q=>q.life>0); if(p.hull<=0){ p.hull=100;p.shield=100;p.xp=Math.max(0,p.xp-40);toast('Emergency clone restored'); }
+      updateUI(); draw(); requestAnimationFrame(tick);
+    }
+
+    function draw(){
+      const sx=(Math.random()-.5)*state.shake, sy=(Math.random()-.5)*state.shake; state.shake*=.88; ctx.save(); ctx.translate(sx,sy); ctx.clearRect(-50,-50,innerWidth+100,innerHeight+100);
+      const g=ctx.createRadialGradient(innerWidth*.55,innerHeight*.45,20,innerWidth*.55,innerHeight*.45,innerWidth*.7); g.addColorStop(0,'rgba(92,141,255,.18)'); g.addColorStop(.45,'rgba(181,108,255,.09)'); g.addColorStop(1,'rgba(2,5,18,0)'); ctx.fillStyle=g; ctx.fillRect(0,0,innerWidth,innerHeight);
+      state.stars.forEach(s=>{ ctx.fillStyle=s.c; ctx.globalAlpha=.35+s.z*.28; ctx.beginPath(); ctx.arc(s.x,s.y,s.s*s.z,0,7); ctx.fill(); }); ctx.globalAlpha=1;
+      state.planets.forEach(pl=>{ const grd=ctx.createRadialGradient(pl.x-pl.r*.3,pl.y-pl.r*.35,4,pl.x,pl.y,pl.r); grd.addColorStop(0,`hsl(${pl.h},90%,72%)`); grd.addColorStop(.55,`hsl(${pl.h+40},70%,32%)`); grd.addColorStop(1,'#020512'); ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(pl.x,pl.y,pl.r,0,7); ctx.fill(); ctx.strokeStyle='rgba(107,232,255,.25)'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(pl.x,pl.y,pl.r+8,0,7); ctx.stroke(); if(pl.ring){ ctx.strokeStyle='rgba(255,211,107,.35)'; ctx.lineWidth=5; ctx.beginPath(); ctx.ellipse(pl.x,pl.y,pl.r*1.55,pl.r*.32,.35,0,7); ctx.stroke(); }});
+      state.bullets.forEach(b=>{ ctx.strokeStyle=b.color; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(b.x,b.y); ctx.lineTo(b.x-b.vx*2,b.y-b.vy*2); ctx.stroke(); });
+      state.enemies.forEach(e=>{ ctx.save(); ctx.translate(e.x,e.y); ctx.rotate(Math.atan2(state.player.y-e.y,state.player.x-e.x)); ctx.fillStyle=e.boss?'#ff647c':'#ff9a64'; ctx.shadowColor=ctx.fillStyle; ctx.shadowBlur=18; ctx.beginPath(); ctx.moveTo(30,0); ctx.lineTo(-22,-18); ctx.lineTo(-12,0); ctx.lineTo(-22,18); ctx.closePath(); ctx.fill(); ctx.restore(); ctx.fillStyle='rgba(255,255,255,.14)'; ctx.fillRect(e.x-30,e.y-34,60,5); ctx.fillStyle=e.boss?'#ff647c':'#ffd36b'; ctx.fillRect(e.x-30,e.y-34,60*(e.hp/(e.boss?260:e.max)),5); });
+      state.drones.forEach(d=>{ ctx.fillStyle='#b56cff'; ctx.shadowColor='#b56cff'; ctx.shadowBlur=18; ctx.beginPath(); ctx.arc(d.x,d.y,8,0,7); ctx.fill(); }); ctx.shadowBlur=0;
+      state.particles.forEach(q=>{ ctx.globalAlpha=q.life/24; ctx.strokeStyle=q.color; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(q.x,q.y,q.r,0,7); ctx.stroke(); }); ctx.globalAlpha=1;
+      const p=state.player; ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.angle); ctx.shadowColor='#6be8ff'; ctx.shadowBlur=24; ctx.fillStyle='#dffaff'; ctx.beginPath(); ctx.moveTo(34,0); ctx.lineTo(-22,-17); ctx.lineTo(-12,0); ctx.lineTo(-22,17); ctx.closePath(); ctx.fill(); ctx.fillStyle='#5c8dff'; ctx.fillRect(-28,-6,14,12); ctx.restore(); ctx.restore();
+    }
+
+    addEventListener('keydown', e=>{ keys.add(e.key.toLowerCase()); if(['1','2','3','4'].includes(e.key)) ability(['lance','drone','blink','ultimate'][+e.key-1]); if(e.key===' ') scan(); if(e.key.toLowerCase()==='j') jump(); if(e.key.toLowerCase()==='c') showDialogue('codex'); });
+    addEventListener('keyup', e=>keys.delete(e.key.toLowerCase())); addEventListener('mousemove', e=>{mouse.x=e.clientX;mouse.y=e.clientY}); addEventListener('mousedown',()=>mouse.down=true); addEventListener('mouseup',()=>mouse.down=false);
+    document.querySelectorAll('[data-ability]').forEach(b=>b.onclick=()=>ability(b.dataset.ability)); document.getElementById('scanBtn').onclick=scan; document.getElementById('jumpBtn').onclick=jump; document.getElementById('codexBtn').onclick=()=>showDialogue('codex');
+    document.getElementById('startBtn').onclick=()=>{ document.getElementById('overlay').style.display='none'; state.running=true; addEvent('Vertical slice initialized: Act I encounter active.'); for(let i=0;i<4;i++) spawnEnemy(); tick(); };
+    resize(); updateUI(); draw();
+  </script>
 </body>
 </html>
